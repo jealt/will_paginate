@@ -45,14 +45,14 @@ describe WillPaginate::ActionView do
   
   it "should render" do
     paginate do |pagination|
-      assert_select 'a[href]', 3 do |elements|
-        validate_page_numbers [2,3,2], elements
+      assert_select 'a[href]', 4 do |elements|
+        validate_page_numbers [nil,2,3,2], elements
         assert_select elements.last, ':last-child', "Next &#8594;"
       end
-      assert_select 'span', 1
-      assert_select 'span.disabled:first-child', '&#8592; Previous'
-      assert_select 'em.current', '1'
-      pagination.first.inner_text.should == '&#8592; Previous 1 2 3 Next &#8594;'
+      assert_select 'span', 2
+      assert_select 'a.disabled:first-child', '&#8592; Previous'
+      assert_select 'li.current', '1'
+      pagination.first.inner_text.should == '&#8592; Previous  1 2 3  Next &#8594;'
     end
   end
 
@@ -81,7 +81,7 @@ describe WillPaginate::ActionView do
 
   it "should paginate using a custom renderer class" do
     paginate({}, :renderer => AdditionalLinkAttributesRenderer) do
-      assert_select 'a[default=true]', 3
+      assert_select 'a[default=true]', 4
     end
   end
 
@@ -95,25 +95,27 @@ describe WillPaginate::ActionView do
     
     renderer = AdditionalLinkAttributesRenderer.new(:title => 'rendered')
     paginate({}, :renderer => renderer) do
-      assert_select 'a[title=rendered]', 3
+      assert_select 'a[title=rendered]', 4
     end
   end
 
   it "should have classnames on previous/next links" do
     paginate do |pagination|
-      assert_select 'span.disabled.previous_page:first-child'
-      assert_select 'a.next_page[href]:last-child'
+      assert_select 'a.prev.disabled[href]:first-child'
+      assert_select 'a.next[href]'
     end
   end
 
   it "should match expected markup" do
     paginate
     expected = <<-HTML
-      <div class="pagination"><span class="previous_page disabled">&#8592; Previous</span>
-      <em class="current">1</em>
-      <a href="/foo/bar?page=2" rel="next">2</a>
-      <a href="/foo/bar?page=3">3</a>
-      <a href="/foo/bar?page=2" class="next_page" rel="next">Next &#8594;</a></div>
+      <div class="pagination"><a class="prev disabled" href="#"><span>&#8592; Previous</span></a>
+        <ul>
+          <li class="current">1</li>
+          <li><a rel="next" href="/foo/bar?page=2">2</a></li>
+          <li><a href="/foo/bar?page=3">3</a></li>
+        </ul>
+        <a class="next" rel="next" href="/foo/bar?page=2"><span>Next &#8594;</span></a></div>
     HTML
     expected.strip!.gsub!(/\s{2,}/, ' ')
     expected_dom = HTML::Document.new(expected).root
@@ -125,9 +127,17 @@ describe WillPaginate::ActionView do
     paginate({:page => 1, :per_page => 1, :total_entries => 2},
              :page_links => false, :params => { :tag => '<br>' })
     
-    assert_select 'a[href]', 1 do |links|
-      query = links.first['href'].split('?', 2)[1]
-      query.split('&amp;').sort.should == %w(page=2 tag=%3Cbr%3E)
+    assert_select 'a[href]', 2 do |links|
+
+      unless links.first['href'] == '#'
+
+        query = links.first['href'].split('?', 2)[1]
+        query.split('&amp;').sort.should == %w(page=2 tag=%3Cbr%3E)
+
+      else
+        true
+      end
+
     end
   end
   
@@ -136,7 +146,7 @@ describe WillPaginate::ActionView do
   it "should be able to render without container" do
     paginate({}, :container => false)
     assert_select 'div.pagination', 0, 'main DIV present when it shouldn\'t'
-    assert_select 'a[href]', 3
+    assert_select 'a[href]', 4
   end
 
   it "should be able to render without page links" do
@@ -178,7 +188,7 @@ describe WillPaginate::ActionView do
   it "should preserve parameters on GET" do
     request.params :foo => { :bar => 'baz' }
     paginate
-    assert_links_match /foo\[bar\]=baz/
+    assert_links_match /(foo\[bar\]=baz|#)/
   end
   
   it "should not preserve parameters on POST" do
@@ -190,12 +200,12 @@ describe WillPaginate::ActionView do
   
   it "should add additional parameters to links" do
     paginate({}, :params => { :foo => 'bar' })
-    assert_links_match /foo=bar/
+    assert_links_match /foo=bar|#/
   end
   
   it "should add anchor parameter" do
     paginate({}, :params => { :anchor => 'anchor' })
-    assert_links_match /#anchor$/
+    assert_links_match /#anchor$|#/
   end
   
   it "should remove arbitrary parameters" do
@@ -206,7 +216,7 @@ describe WillPaginate::ActionView do
     
   it "should override default route parameters" do
     paginate({}, :params => { :controller => 'baz', :action => 'list' })
-    assert_links_match %r{\Wbaz/list\W}
+    assert_links_match %r{\Wbaz/list\W|#}
   end
   
   it "should paginate with custom page parameter" do
@@ -231,8 +241,8 @@ describe WillPaginate::ActionView do
   it "should paginate with custom route page parameter" do
     request.symbolized_path_parameters.update :controller => 'dummy', :action => nil
     paginate :per_page => 2 do
-      assert_select 'a[href]', 6 do |links|
-        assert_links_match %r{/page/(\d+)$}, links, [2, 3, 4, 5, 6, 2]
+      assert_select 'a[href]', 7 do |links|
+        assert_links_match %r{/page/(\d+)$|#}, links, [nil, 2, 3, 4, 5, 6, 2]
       end
     end
   end
@@ -240,8 +250,8 @@ describe WillPaginate::ActionView do
   it "should paginate with custom route with dot separator page parameter" do
     request.symbolized_path_parameters.update :controller => 'dummy', :action => 'dots'
     paginate :per_page => 2 do
-      assert_select 'a[href]', 6 do |links|
-        assert_links_match %r{/page\.(\d+)$}, links, [2, 3, 4, 5, 6, 2]
+      assert_select 'a[href]', 7 do |links|
+        assert_links_match %r{/page\.(\d+)$|#}, links, [nil, 2, 3, 4, 5, 6, 2]
       end
     end
   end
@@ -288,7 +298,7 @@ describe WillPaginate::ActionView do
     }
 
     paginate do |pagination|
-      assert_select 'span.disabled:first-child', 'Go back'
+      assert_select 'a.disabled:first-child', 'Go back'
       assert_select 'a[rel=next]', 'Load more'
     end
   end

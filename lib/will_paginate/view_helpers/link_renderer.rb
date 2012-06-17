@@ -39,12 +39,20 @@ module WillPaginate
       end
       
     protected
-    
+
+      def ul_open
+        '<ul>'
+      end
+
+      def ul_close
+        '</ul>'
+      end
+
       def page_number(page)
         unless page == current_page
-          link(page, page, :rel => rel_value(page))
+          tag(:li, link(page, page))
         else
-          tag(:em, page, :class => 'current')
+          tag(:li, page, :class => 'current')
         end
       end
       
@@ -55,19 +63,19 @@ module WillPaginate
       
       def previous_page
         num = @collection.current_page > 1 && @collection.current_page - 1
-        previous_or_next_page(num, @options[:previous_label], 'previous_page')
+        previous_or_next_page(num, @options[:previous_label], 'prev')
       end
       
       def next_page
         num = @collection.current_page < @collection.total_pages && @collection.current_page + 1
-        previous_or_next_page(num, @options[:next_label], 'next_page')
+        previous_or_next_page(num, @options[:next_label], 'next')
       end
       
       def previous_or_next_page(page, text, classname)
         if page
-          link(text, page, :class => classname)
+          link( tag(:span, text), page, :class => classname)
         else
-          tag(:span, text, :class => classname + ' disabled')
+          link( tag(:span, text), '#', :class => classname + ' disabled')
         end
       end
       

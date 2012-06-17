@@ -17,6 +17,8 @@ module WillPaginate
       
       def pagination
         items = @options[:page_links] ? windowed_page_numbers : []
+        items.unshift :ul_open
+        items.push :ul_close
         items.unshift :previous_page
         items.push :next_page
       end
@@ -29,7 +31,7 @@ module WillPaginate
         inner_window, outer_window = @options[:inner_window].to_i, @options[:outer_window].to_i
         window_from = current_page - inner_window
         window_to = current_page + inner_window
-        
+
         # adjust lower or upper limit if other is out of bounds
         if window_to > total_pages
           window_from -= window_to - total_pages

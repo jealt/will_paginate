@@ -34,7 +34,7 @@ describe WillPaginate::ViewHelpers::LinkRendererBase do
   
   it "should have pagination definition" do
     prepare({ :total_pages => 1 }, :page_links => true)
-    @renderer.pagination.should == [:previous_page, 1, :next_page]
+    @renderer.pagination.should == [:previous_page, :ul_open, 1, :ul_close, :next_page]
   end
   
   describe "visible page numbers" do
